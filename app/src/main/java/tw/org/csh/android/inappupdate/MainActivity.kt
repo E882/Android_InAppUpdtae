@@ -20,7 +20,7 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
-    val imageUrl: String = "https://i.imgur.com/yc3CbKN.jpg"
+    val imageUrl: String = "http://mdevws.csh.org.tw/App_output/app-debug.apk"
 
     var msg: String? = ""
     var lastMsg = ""
@@ -47,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun downloadImage(url: String) {
-        val directory = File(Environment.DIRECTORY_PICTURES)
+        val directory = File(Environment.DIRECTORY_DOWNLOADS)
 
         if (!directory.exists()) {
             directory.mkdirs()
