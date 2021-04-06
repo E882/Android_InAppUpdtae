@@ -20,7 +20,7 @@ import java.io.File
 
 class MainActivity : AppCompatActivity() {
 
-    val imageUrl: String = "http://mdevws.csh.org.tw/App_output/app-debug.apk"
+    val imageUrl: String = "https://mdevws.csh.org.tw/App_output/app-debug.apk"
 
     var msg: String? = ""
     var lastMsg = ""
