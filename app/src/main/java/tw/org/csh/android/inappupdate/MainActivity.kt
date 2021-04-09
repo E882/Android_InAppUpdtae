@@ -2,11 +2,15 @@ package tw.org.csh.android.inappupdate
 
 import android.Manifest
 import android.app.DownloadManager
+import android.content.Context
 import android.content.pm.PackageManager
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.CalendarContract.Instances.query
+import android.provider.CalendarContract.Reminders.query
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -23,9 +27,11 @@ class MainActivity : AppCompatActivity() {
     var latestDownloadID: Long? = null
 
 
-    var URL: String? = null
+    //var URL: String? = null
     //var downloadObserver: DownloadObserver? = null
-    var CONTENT_URI = Uri.parse("content://downloads/my_downloads")
+    //var CONTENT_URI = Uri.parse("content://downloads/my_downloads")
+
+    var AppURL = "https://mdevws.csh.org.tw/App_Archives/Android/Develop/TestingApp2/app-debug.apk"
 
     var tvVersion: TextView? = null
     var btnUpload: Button? = null
@@ -50,13 +56,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadNewVersion() {
-        //newFragment = DialogFragmentHelper()
-        //newFragment.show(supportFragmentManager, "download apk")
-        DM = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
-        URL = "https://mdevws.csh.org.tw/App_Archives/Android/Develop/TestingApp2/app-debug.apk"
-        val uri = Uri.parse(URL)
-        request = DownloadManager.Request(uri)
-        request!!.setMimeType("application/vnd.android.package-archive") // ("application/vnd.android.package-archive")
+
+//        DM = getSystemService(DOWNLOAD_SERVICE) as DownloadManager
+//        URL = "https://mdevws.csh.org.tw/App_Archives/Android/Develop/TestingApp2/app-debug.apk"
+//        val uri = Uri.parse(URL)
+//        request = DownloadManager.Request(uri)
+//        request!!.setMimeType("application/vnd.android.package-archive") // https://blog.csdn.net/heikefangxian23/article/details/38582261
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) { //Android 6.0以上需要判斷使用者是否願意開啟儲存(WRITE_EXTERNAL_STORAGE)的權限
             checkStoragePermission()
@@ -80,18 +85,30 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun downloadManagerEnqueue() {
-        //創建目錄
-        //Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).mkdir()
-        //val directory = File(Environment.DIRECTORY_DOWNLOADS)
-        if(File(Environment.DIRECTORY_DOWNLOADS).exists()) {
-            File(Environment.DIRECTORY_DOWNLOADS).mkdirs()
-        }
+
+        var request = DownloadManager.Request(Uri.parse(AppURL))
+
+        request.setAllowedNetworkTypes(DownloadManager.Request.NETWORK_WIFI or DownloadManager.Request.NETWORK_MOBILE)
+        request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
+        request.setTitle("下載")
+        request.setDescription("apk正在下載")
+        request.setAllowedOverRoaming(false)
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "APP-Download.apk")
+
+        var download = this.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        var DownloadID = download.enqueue(request)
 
 
-        //設定APK儲存位置
-        request!!.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "APP.jpg")
-        latestDownloadID = DM!!.enqueue(request)
-
+//        //創建目錄
+//        //Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).mkdir()
+//        //val directory = File(Environment.DIRECTORY_DOWNLOADS)
+//        if(File(Environment.DIRECTORY_DOWNLOADS).exists()) {
+//            File(Environment.DIRECTORY_DOWNLOADS).mkdirs()
+//        }
+//
+//        //設定APK儲存位置
+//        request!!.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "APP.jpg")
+//        latestDownloadID = DM!!.enqueue(request)
 
 //        val receiver = DownloadCompleteReceiver(applicationContext)
 //        registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) //註冊DOWNLOAD_COMPLETE-BroadcastReceiver
@@ -110,10 +127,41 @@ class MainActivity : AppCompatActivity() {
 //        LatestDownloadID= DM.enqueue(request);
 
     }
+
+    fun getBytesAndStatus(downloadID: Long): IntArray? {
+        val bytesAndStatus = intArrayOf(-1, -1, 0)
+        val query: DownloadManager.Query = DownloadManager.Query().setFilterById(downloadID)
+        var cursor: Cursor? = null
+        try {
+            cursor = mDownloadManager.query(query)
+            if (cursor != null && cursor.moveToFirst()) {
+                //已經下載檔案大小
+                bytesAndStatus[0] =
+                        cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+                //下載檔案的總大小
+                bytesAndStatus[1] =
+                        cursor.getInt(cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+                //下載狀態
+                bytesAndStatus[2] =
+                        cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS))
+
+                mDownloadListener?.onProgressChange(
+                        bytesAndStatus[1],
+                        bytesAndStatus[0],
+                        bytesAndStatus[2]
+                )
+            }
+        } finally {
+            cursor?.close()
+        }
+        return bytesAndStatus
+    }
+
+
+
     companion object {
         private const val MY_PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE = 1
     }
-
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         when (requestCode) {
