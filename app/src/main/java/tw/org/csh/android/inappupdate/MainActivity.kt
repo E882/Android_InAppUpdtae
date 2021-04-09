@@ -1,3 +1,5 @@
+//https://solinariwu.blogspot.com/2017/03/android-downloadmanagerapkandroid-60-70.html
+
 package tw.org.csh.android.inappupdate
 
 import android.annotation.SuppressLint
