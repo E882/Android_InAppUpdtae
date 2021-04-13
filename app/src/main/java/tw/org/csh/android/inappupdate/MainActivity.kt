@@ -3,23 +3,19 @@
 package tw.org.csh.android.inappupdate
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.app.DownloadManager
-import android.content.Context
+import android.content.IntentFilter
 import android.content.pm.PackageManager
-import android.database.ContentObserver
-import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.Handler
 import android.widget.Button
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -52,8 +48,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun downloadNewVersion() {
-        newFragment = DialogFragmentHelper()
-        newFragment!!.show(supportFragmentManager, "download apk")
+        //newFragment = DialogFragmentHelper()
+        //newFragment!!.show(supportFragmentManager, "download apk")
 
         downloadManager = this.getSystemService(DOWNLOAD_SERVICE) as DownloadManager
         var Uri = Uri.parse(app_URL)
@@ -95,10 +91,21 @@ class MainActivity : AppCompatActivity() {
         //Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).mkdir()
 
         request!!.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "CSH_APP.apk")
-        var downloadObserver = DownloadObserver(null)
-        contentResolver.registerContentObserver(CONTENT_URI, true, downloadObserver)
+
+        // ---
+        val receiver = DownloadCompleteReceiver(applicationContext)
+        registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)) //註冊DOWNLOAD_COMPLETE-BroadcastReceiver
+
+        // ---
+        //var downloadObserver = DownloadObserver(null)
+        //contentResolver.registerContentObserver(CONTENT_URI, true, downloadObserver)
 
         downloadID = downloadManager!!.enqueue(request)
+
+        val sp = SharedPreferencesHelper(applicationContext)
+        sp.setDownloadID(downloadID!!) //儲存DownloadID
+        // --
+
     }
 
     companion object {
@@ -127,30 +134,30 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    class DownloadObserver(handler: Handler?) :
-        ContentObserver(handler) {
-        lateinit var mContext: Context
-
-        override fun onChange(selfChange: Boolean) {
-            val query = DownloadManager.Query()
-            downloadID?.let { query.setFilterById(it) }
-            val dm = mContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            val cursor: Cursor? = dm.query(query)
-            if (cursor != null && cursor.moveToFirst()) {
-                val totalColumn: Int =
-                    cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
-                val currentColumn: Int =
-                    cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
-                val totalSize: Int = cursor.getInt(totalColumn)
-                val currentSize: Int = cursor.getInt(currentColumn)
-                val percent = currentSize.toFloat() / totalSize.toFloat()
-                val progress = Math.round(percent * 100)
-                (mContext as Activity).runOnUiThread(
-                    Runnable() { //確保在UI Thread執行
-                    fun run() {
-                        newFragment!!.setProgress(progress) }})
-            }
-        }
-    }
+//    class DownloadObserver(handler: Handler?) :
+//        ContentObserver(handler) {
+//        lateinit var mContext: Context
+//
+//        override fun onChange(selfChange: Boolean) {
+//            val query = DownloadManager.Query()
+//            downloadID?.let { query.setFilterById(it) }
+//            val dm = mContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+//            val cursor: Cursor? = dm.query(query)
+//            if (cursor != null && cursor.moveToFirst()) {
+//                val totalColumn: Int =
+//                    cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES)
+//                val currentColumn: Int =
+//                    cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR)
+//                val totalSize: Int = cursor.getInt(totalColumn)
+//                val currentSize: Int = cursor.getInt(currentColumn)
+//                val percent = currentSize.toFloat() / totalSize.toFloat()
+//                val progress = Math.round(percent * 100)
+//                (mContext as Activity).runOnUiThread(
+//                    Runnable() { //確保在UI Thread執行
+//                    fun run() {
+//                        newFragment!!.setProgress(progress) }})
+//            }
+//        }
+//    }
 }
 
